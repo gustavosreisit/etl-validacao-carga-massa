@@ -91,3 +91,10 @@ nulos, tipo de veículo — antes de qualquer dado tocar o banco)*
   Airflow (extract/validate → load staging → process, com retry e alerta).
 
 Variáveis de ambiente necessárias: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+
+  ## 👤 Autor
+
+**Gustavo Silva Reis**  
+Engenheiro de Dados Júnior  
+[LinkedIn](www.linkedin.com/in/gsreisit)
+
