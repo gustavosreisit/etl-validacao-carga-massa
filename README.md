@@ -73,7 +73,7 @@ nulos, tipo de dispositivo — antes de qualquer dado tocar o banco)*
 
 ### Auditoria gerada automaticamente (opcional)
 
-<img width="1720" height="815" alt="image" src="https://github.com/user-attachments/assets/360a8c30-ed51-4dcd-b98c-03b3d2e48697" />
+<img width="1668" height="447" alt="image" src="https://github.com/user-attachments/assets/b8cc7767-fa42-48b1-b889-038a0580828c" />
 
 *(print da tabela `logs` mostrando o registro automático gerado pelo trigger —
 pode remover esta seção se preferir um README mais enxuto)*
