@@ -1,13 +1,14 @@
-
-# Implantação em Massa de Frota via CSV (Python + PostgreSQL)
+# Pipeline de Implantação em Massa via CSV (Python + PostgreSQL)
 
 Pipeline que demonstra a substituição de um processo de implantação manual
-(cliente → veículo → item → subitem) por uma carga automatizada com validação
-em camadas, staging table, idempotência e log de auditoria.
+(cliente → dispositivo → marca de componente → componente) por uma carga
+automatizada com validação em camadas, staging table, idempotência e log
+de auditoria.
 
-> **Nota:** todos os dados usados neste repositório (clientes, placas, itens)
-> são fictícios, gerados para fins de demonstração. Nenhuma informação real
-> de cliente ou de sistema de produção está presente.
+> **Nota:** todos os dados usados neste repositório (clientes, dispositivos,
+> componentes) são fictícios, gerados para fins de demonstração. O domínio
+> escolhido (gestão de ativos de TI) é ilustrativo e não representa nenhum
+> sistema de produção real.
 
 ## Problema
 
@@ -20,7 +21,6 @@ Este projeto demonstra uma solução onde **toda a verificação passa a ser
 automática antes da carga** — o processo deixa de depender de atenção manual
 para pegar erro de digitação, duplicidade ou dado fora do padrão.
 
-## Solução
 Fluxo detalhado:
 
 ```
@@ -30,19 +30,19 @@ CSV bruto
 [Python] validação estrutural + padronização (pandas)
    │  - colunas obrigatórias
    │  - linhas vazias / nulos em campos obrigatórios
-   │  - duplicidade por chave natural (customer_id + plate + number)
-   │  - tipos de veículo válidos (consulta dinâmica em car_types)
+   │  - duplicidade por chave natural (customer_id + asset_tag + serial_code)
+   │  - tipos de dispositivo válidos (consulta dinâmica em device_types)
    │  - upper/strip em campos texto
    ▼
-[PostgreSQL] staging table `insercao_massa` (por lote_id)
+[PostgreSQL] staging table `staging_import` (por lote_id)
    ▼
-procedure `processar_insercao_massa(lote_id)`
+procedure `processar_lote(lote_id)`
    ▼
-procedure `implantacao_carros(...)` — por linha, idempotente (check-then-insert)
+procedure `implanta_registro(...)` — por linha, idempotente (check-then-insert)
    ▼
-tabelas finais: clientes / carros / marcas_pneu / pneus
+tabelas finais: customers / devices / component_brands / components
    ▼
-trigger `trg_insert_tires` → tabela `logs` (auditoria: quem, quando, o quê)
+trigger `trg_insert_components` → tabela `logs` (auditoria: quem, quando, o quê)
 ```
 
 ## Stack
@@ -54,47 +54,46 @@ trigger `trg_insert_tires` → tabela `logs` (auditoria: quem, quando, o quê)
 
 - **Staging table com `lote_id`**: cada execução grava com um UUID de lote,
   permitindo rastrear e reprocessar cargas específicas sem misturar execuções.
-- **Idempotência por design**: a procedure `implantacao_carros` verifica
+- **Idempotência por design**: a procedure `implanta_registro` verifica
   existência antes de inserir em cada tabela — rodar o mesmo CSV duas vezes
   não duplica registros.
-- **Transação única por lote**: staging + processamento rodam na mesma
-  transação; qualquer erro reverte o lote inteiro (nada fica em estado parcial).
-- **Log de auditoria via trigger**: toda inserção de pneu gera registro em
-  `logs` automaticamente, sem depender de o processo de origem lembrar de logar.
+- **Isolamento de erro por linha**: `processar_lote` roda cada chamada dentro
+  de um bloco `BEGIN/EXCEPTION` próprio — uma linha inválida é registrada em
+  `implantacao_errors` e o processamento continua para as demais, em vez de
+  reverter o lote inteiro.
+- **Log de auditoria via trigger**: toda inserção de componente gera registro
+  em `logs` automaticamente, sem depender de o processo de origem lembrar de logar.
 
 ### Validação em ação
 
-<img width="1243" height="528" alt="image" src="https://github.com/user-attachments/assets/ec2d1b28-87af-4802-9753-29e4dbe63b6a" />
+<img width="431" height="680" alt="image" src="https://github.com/user-attachments/assets/521a4e42-d93d-4477-8df0-f008a6887310" />
 
 *(print do terminal com o script rodando as checagens — colunas obrigatórias,
-nulos, tipo de veículo — antes de qualquer dado tocar o banco)*
+nulos, tipo de dispositivo — antes de qualquer dado tocar o banco)*
 
-### Auditoria gerada automaticamente 
+### Auditoria gerada automaticamente (opcional)
 
-<img width="1329" height="855" alt="WhatsApp Image 2026-08-21 at 16 57 50" src="https://github.com/user-attachments/assets/207a9c34-bb78-4572-815e-63fcc3da68fc" />
+<img width="1720" height="815" alt="image" src="https://github.com/user-attachments/assets/360a8c30-ed51-4dcd-b98c-03b3d2e48697" />
 
-
-*(print da tabela `logs` mostrando o registro automático gerado pelo trigger.*
+*(print da tabela `logs` mostrando o registro automático gerado pelo trigger —
+pode remover esta seção se preferir um README mais enxuto)*
 
 ## Resultado
 
-<img width="633" height="309" alt="image" src="https://github.com/user-attachments/assets/f4c9d184-0026-4e03-b244-185edfc52d02" />
+<img width="790" height="385" alt="image" src="https://github.com/user-attachments/assets/62750e31-edb5-4b29-85dd-6ca25c8e8ed4" />
 
-- Lote de demonstração com 500 registros fictícios processado em 2,02 segundos.
-- O mesmo processo, feito manualmente registro a registro, levaria próximo de 1 semana entre validações e padronizações dos dados e análise para não violação de Constraints(regras do banco).
-- Toda inconsistência (dado nulo, duplicado, fora do padrão) é barrada
+- Processo manual de referência: ~1 semana para um lote de 250 registros.
+- Processo automatizado: 2,02s para um lote de 500 registros (o dobro do
+  volume), medido com `Measure-Command`.
+- Os dois números não são do mesmo volume — o automatizado foi testado
+  propositalmente com o dobro para demonstrar que o ganho se mantém mesmo
+  aumentando a carga.
+- Toda inconsistência (dado nulo, duplicidade, fora do padrão) é barrada
   **antes** de chegar ao banco — nenhuma carga incompleta é possível.
 
 ## Próximos passos
 
 - Orquestração hoje é execução manual do script; próxima etapa é migrar para
-  Airflow (extract/validate → load staging → process, com retry e alerta).
+  Airflow (extract/validate → load staging → process, com retry e alerta por task).
 
 Variáveis de ambiente necessárias: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
-
-  ## 👤 Autor
-
-**Gustavo Silva Reis**  
-Engenheiro de Dados Júnior  
-[LinkedIn](www.linkedin.com/in/gsreisit)
-
