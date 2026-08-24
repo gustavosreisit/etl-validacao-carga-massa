@@ -97,3 +97,12 @@ pode remover esta seção se preferir um README mais enxuto)*
   Airflow (extract/validate → load staging → process, com retry e alerta por task).
 
 Variáveis de ambiente necessárias: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
+
+---
+
+## 👤 Autor
+
+**Gustavo Silva Reis**  
+Engenheiro de Dados Júnior  
+[www.linkedin.com/in/gsreisit](https://www.linkedin.com/in/gsreisit/)
+
