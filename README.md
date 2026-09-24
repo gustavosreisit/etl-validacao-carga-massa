@@ -91,11 +91,6 @@ pode remover esta seção se preferir um README mais enxuto)*
 - Toda inconsistência (dado nulo, duplicidade, fora do padrão) é barrada
   **antes** de chegar ao banco — nenhuma carga incompleta é possível.
 
-## Próximos passos
-
-- Orquestração hoje é execução manual do script; próxima etapa é migrar para
-  Airflow (extract/validate → load staging → process, com retry e alerta por task).
-
 Variáveis de ambiente necessárias: `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`.
 
 ---
